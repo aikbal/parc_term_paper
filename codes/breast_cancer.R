@@ -1,0 +1,64 @@
+breast_cancer <- read.csv(("../data/breast_cancer.csv"))
+
+
+library(ggplot2)
+library(ggsci)
+library(mlr3)
+library(data.table)
+library(cpi)
+#install.packages ("e1071", dependencies = TRUE)
+library(e1071)
+library(caret)
+library(caTools)
+
+breast_cancer<-breast_cancer[2:(length(breast_cancer)-1)]
+
+#task <- createDummyFeatures(breast_cancer, method = "reference", cols = 1)
+
+breast_cancer$diagnosis[breast_cancer$diagnosis=='M'] <-1
+breast_cancer$diagnosis[breast_cancer$diagnosis=='B'] <-0
+
+
+mytask <- makeClassifTask(data = breast_cancer, target = "diagnosis")
+
+
+cpi_rf_log_bc<-cpi(task = mytask, 
+    learner = makeLearner("classif.ranger", num.trees = 50),
+    resampling = makeResampleDesc("CV", iters = 5), 
+    measure = "mmce", test = "t")
+
+
+cpi_svm_log_bc<-cpi(task = mytask, 
+                    learner = makeLearner("classif.svm",kernel = "radial"),
+                    resampling = makeResampleDesc("CV", iters = 5), 
+                    measure = "mmce", test = "t")
+
+# Combine for plotting
+res <- rbind(data.table(Learner = "Random Forest", Log = "Multiplicative CPI", cpi_rf_log_bc[, c("Variable", "CPI", "SE", "p.value")]),
+             data.table(Learner = "Support vector machine", Log = "Multiplicative CPI", cpi_svm_log_bc[, c("Variable", "CPI", "SE", "p.value")]))#, 
+res[, p.adj := p.adjust(p.value, "holm")]
+res[, signif := ifelse(p.adj <= .05, 1, 0)]
+Variable<- cpi_svm_log_bc$Variable
+levels <- res[Learner == "Support vector machine", as.character(Variable)[order(CPI)]]
+
+
+labels <- levels
+labels[labels == "chas.1"] <- "chas"
+res[, Variable := factor(Variable, levels = levels, labels = labels)]
+
+# Plot
+ggplot(res, aes(x = Variable, fill = Learner, y = CPI, alpha = signif)) + 
+  geom_bar(stat = "identity", position = position_dodge(-.9)) + 
+  geom_errorbar(aes(ymin = CPI - SE, ymax = CPI + SE), position = position_dodge(-.9)) +
+  #facet_wrap(~ Log, scales = "free") + 
+  scale_fill_npg() +
+  scale_alpha_continuous(range = c(.4, 1)) + 
+  coord_flip() + 
+  theme_bw() + 
+  theme(legend.position = "top") + 
+  guides(alpha = "none") + 
+  ylab("CPI")
+ggsave("../img/breast_cancer.png", width = 6, height = 8)
+
+
+
