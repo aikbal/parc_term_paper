@@ -10,7 +10,7 @@ library(e1071)
 
 
 seed <- 100
-data(iris)
+data(mtcars)
 
 # Convert 2-level factor to binary
 mtcars_task <- makeRegrTask(data = mtcars, target = "mpg")

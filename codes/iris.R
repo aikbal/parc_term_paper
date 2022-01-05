@@ -27,7 +27,7 @@ cpi_svm_log_iris<-cpi(task = mytask,
                     measure = "mmce", test = "t")
 
 # Combine for plotting
-res <- rbind(data.table(Learner = "Decesion Tree", Log = "Multiplicative CPI", cpi_rf_log_iris[, c("Variable", "CPI", "SE", "p.value")]),
+res <- rbind(data.table(Learner = "Decision Tree", Log = "Multiplicative CPI", cpi_rf_log_iris[, c("Variable", "CPI", "SE", "p.value")]),
              data.table(Learner = "Support vector machine", Log = "Multiplicative CPI", cpi_svm_log_iris[, c("Variable", "CPI", "SE", "p.value")]))#, 
 res[, p.adj := p.adjust(p.value, "holm")]
 res[, signif := ifelse(p.adj <= .05, 1, 0)]
